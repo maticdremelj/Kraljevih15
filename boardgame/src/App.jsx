@@ -5,11 +5,9 @@ function App() {
 
   return (
     <>
-      <body>
-        <div>
-          Hello world!
-        </div>
-      </body>
+      <div>
+        Hello world!
+      </div>
     </>
   )
 }
