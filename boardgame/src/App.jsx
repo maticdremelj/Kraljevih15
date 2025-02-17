@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import './App.css'
-import './assets/board'
+import Board from './assets/Board' 
 
 function App() {
 
-  return (
-    <>
-      <div className="min-h-screen flex justify-center items-center">
-          <board />
-      </div>
-    </>
-  )
+	return (
+    	<>
+      		<div>
+				<header>Test App</header>
+        		<Board/>
+      		</div>      
+    	</>
+  	)
 }
 
 export default App
