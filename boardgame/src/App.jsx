@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import './App.css'
+import './assets/board'
 
 function App() {
 
   return (
     <>
-      <div>
-        Hello world!
+      <div className="min-h-screen flex justify-center items-center">
+          <board />
       </div>
     </>
   )
