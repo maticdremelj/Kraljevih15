@@ -1,16 +1,10 @@
-import { useState } from 'react'
-import Board from './assets/Board' 
+import { BrowserRouter as Router } from 'react-router-dom';
+import RoutesComponents from './assets/RoutesComponents';
 
-function App() {
-
-	return (
-    	<>
-      		<div>
-				<header>Test App</header>
-        		<Board/>
-      		</div>      
-    	</>
-  	)
-}
+const App = () => (
+  <Router basename="/board-game">
+    <RoutesComponents />
+  </Router>
+);
 
 export default App
