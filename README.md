@@ -1,5 +1,5 @@
 Link: https://kraljevih15.web.app/
 
 Command:
- - npm run dev
+ - npm run build
  - firebase deploy --only hosting
