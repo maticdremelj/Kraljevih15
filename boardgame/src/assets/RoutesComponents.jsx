@@ -4,6 +4,7 @@ import Lobby from './Lobby';
 import LandingPage from './LandingPage';
 import Host from './Host';
 import Join from './Join';
+import NotFound from './NotFound';
 
 const RoutesComponents = () => (
   <Routes>
@@ -12,6 +13,7 @@ const RoutesComponents = () => (
       <Route path="host" element={<Host />} />
       <Route path="join" element={<Join />} />
     </Route>
+    <Route path="*" element={<NotFound />} />
   </Routes>
 );
 

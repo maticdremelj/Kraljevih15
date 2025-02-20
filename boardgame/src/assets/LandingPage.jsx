@@ -4,7 +4,7 @@ const LandingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-start justify-center  h-screen">
+    <div className="flex items-start justify-center h-screen">
       <div className="mt-[33vh] text-center">
         <h1>Landing Page</h1>
         <button
