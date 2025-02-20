@@ -1,2 +1,6 @@
 Link:
-  https://maticdremelj.github.io/board-game/
+  https://kraljevih15.web.app/
+
+Command:
+  npm run dev
+  firebase deploy --only hosting
