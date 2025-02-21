@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 firestore.rules
 .env
+functions.help
