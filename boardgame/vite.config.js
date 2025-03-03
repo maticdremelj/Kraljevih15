@@ -12,5 +12,20 @@ export default defineConfig({
       gzipSize: true,
       brotliSize: true 
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("firebase")) return "firebase";
+            if (id.includes("react-dom")) return "react-dom";
+            if (id.includes("react")) return "react";
+            if (id.includes("lodash")) return "lodash";
+            return "vendor";
+          }
+        }
+      }
+    }
+  }
 })
