@@ -7,8 +7,8 @@ export default defineConfig({
     react(),
     visualizer({
       filename: 'dist/stats.html', 
-      template: 'sunburst', // 'sunburst', 'treemap', 'network'
-      open: true,
+      template: 'network', // 'sunburst', 'treemap', 'network'
+      open: false,
       gzipSize: true,
       brotliSize: true 
     })
@@ -18,7 +18,12 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            if (id.includes("firebase")) return "firebase";
+            if (id.includes("firebase")) {
+              if (id.includes("firebase/firestore")) return "firebase-firestore";
+              if (id.includes("firebase/functions")) return "firebase-functions";
+              if (id.includes("firebase/hosting")) return "firebase-hosting";
+              return "firebase-core";
+            }
             if (id.includes("react-dom")) return "react-dom";
             if (id.includes("react")) return "react";
             if (id.includes("lodash")) return "lodash";

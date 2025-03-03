@@ -6,7 +6,7 @@ const NotFound = () => {
   useEffect(() => {
     setTimeout(() => {
       navigate('/'); 
-    }, 3000);
+    }, 1000);
   }, [navigate]);
 
   return (
