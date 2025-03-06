@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { db } from "../firebaseConfig"; // Import Firestore instance
+import { doc, setDoc } from "firebase/firestore";
 import { createPeerConnection, createOffer } from "../webrtcUtils";
 
 const Host = () => {
   const pcRef = useRef(null);
   const [offer, setOffer] = useState(null);
+  const [gameId, setGameId] = useState(null);
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [error, setError] = useState(null);
 
@@ -20,10 +23,8 @@ const Host = () => {
   }, []);
 
   const handleCreateGame = async () => {
-    // Reset error state
     setError(null);
     
-    // Check if we already have an offer
     if (offer) {
       console.log("Offer already created, skipping duplicate.");
       return;
@@ -35,12 +36,21 @@ const Host = () => {
       return;
     }
 
-    // Set loading state
     setIsCreatingOffer(true);
     
     try {
       const newOffer = await createOffer(pc);
       setOffer(newOffer);
+
+      // Generate a unique game ID (can be replaced with a UUID or user input)
+      const newGameId = Math.random().toString().slice(2, 8);
+      setGameId(newGameId);
+
+      // Store the offer in Firestore
+      const gameRef = doc(db, "games", newGameId);
+      await setDoc(gameRef, { offer: newOffer });
+
+      console.log("Offer saved to Firestore:", newOffer);
     } catch (err) {
       console.error("Failed to create offer:", err);
       setError(`Failed to create offer: ${err.message}`);
@@ -59,9 +69,15 @@ const Host = () => {
       >
         {isCreatingOffer ? "Creating..." : "Create Game"}
       </button>
-      
+
       {error && <p className="text-red-500">{error}</p>}
-      {offer && <p>Offer created. Share it with the guest.</p>}
+      {offer && (
+        <div>
+          <p>Offer created and shared.</p>
+          <p><strong>Game ID:</strong> {gameId}</p>
+          <p>Share this Game ID with the guest.</p>
+        </div>
+      )}
     </div>
   );
 };
