@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { db } from "../firebaseConfig"; // Import Firestore instance
-import { doc, setDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom"; // ✅ Import for navigation
+import { db } from "../firebaseConfig";
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { createPeerConnection, createOffer } from "../webrtcUtils";
 
 const Host = () => {
   const pcRef = useRef(null);
+  const navigate = useNavigate(); // ✅ Hook for navigation
   const [offer, setOffer] = useState(null);
   const [gameId, setGameId] = useState(null);
   const [isCreatingOffer, setIsCreatingOffer] = useState(false);
   const [error, setError] = useState(null);
 
-  // Initialize peer connection
   useEffect(() => {
     pcRef.current = createPeerConnection();
     
@@ -37,20 +38,29 @@ const Host = () => {
     }
 
     setIsCreatingOffer(true);
-    
+
     try {
       const newOffer = await createOffer(pc);
       setOffer(newOffer);
 
-      // Generate a unique game ID (can be replaced with a UUID or user input)
       const newGameId = Math.random().toString().slice(2, 8);
       setGameId(newGameId);
 
-      // Store the offer in Firestore
       const gameRef = doc(db, "games", newGameId);
       await setDoc(gameRef, { offer: newOffer });
 
       console.log("Offer saved to Firestore:", newOffer);
+
+      // ✅ Listen for an answer from the guest
+      onSnapshot(gameRef, async (snapshot) => {
+        const data = snapshot.data();
+        if (data?.answer && pc.signalingState !== "closed") {
+          console.log("Answer received from Firestore:", data.answer);
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          navigate(`/board/${newGameId}`); // ✅ Move to Board
+        }
+      });
+
     } catch (err) {
       console.error("Failed to create offer:", err);
       setError(`Failed to create offer: ${err.message}`);
@@ -73,8 +83,7 @@ const Host = () => {
       {error && <p className="text-red-500">{error}</p>}
       {offer && (
         <div>
-          <p>Offer created and shared.</p>
-          <p><strong>Game ID:</strong> {gameId}</p>
+          <p>Game ID: {gameId}</p>
           <p>Share this Game ID with the guest.</p>
         </div>
       )}
