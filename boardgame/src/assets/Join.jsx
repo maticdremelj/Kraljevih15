@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { db } from "../firebaseConfig"; // ✅ Import Firestore instance
+import { useNavigate } from "react-router-dom"; // ✅ Import for navigation
+import { db } from "../firebaseConfig";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { createPeerConnection, createAnswer } from "../webrtcUtils";
 
 const Join = () => {
   const pcRef = useRef(null);
+  const navigate = useNavigate(); // ✅ Hook for navigation
   const [gameId, setGameId] = useState("");
   const [error, setError] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     pcRef.current = createPeerConnection();
@@ -50,18 +51,14 @@ const Join = () => {
       }
 
       console.log("Offer received from Firestore:", gameData.offer);
-
-      // ✅ Set remote description (the host's offer)
       await pc.setRemoteDescription(new RTCSessionDescription(gameData.offer));
 
-      // ✅ Create an answer
       const answer = await createAnswer(pc);
-
-      // ✅ Save the answer to Firestore
       await setDoc(gameRef, { answer }, { merge: true });
 
-      console.log("Answer created and sent to Firestore:", answer);
-      setConnected(true);
+      console.log("Answer sent to Firestore:", answer);
+      navigate(`/board/${gameId}`); // ✅ Move to Board
+
     } catch (err) {
       console.error("Failed to join game:", err);
       setError(`Failed to join game: ${err.message}`);
@@ -82,14 +79,13 @@ const Join = () => {
       />
       <button
         onClick={handleJoinGame}
-        disabled={isConnecting || connected || !gameId}
+        disabled={isConnecting || !gameId}
         className="border-2 ml-2"
       >
         {isConnecting ? "Connecting..." : "Join Game"}
       </button>
 
       {error && <p className="text-red-500">{error}</p>}
-      {connected && <p className="text-green-500">Connected to Host!</p>}
     </div>
   );
 };
