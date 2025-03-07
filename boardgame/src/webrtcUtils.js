@@ -31,3 +31,15 @@ export const createOffer = async (pc) => {
     console.error("Error creating offer:", error);
   }
 };
+
+export const createAnswer = async (pc) => {
+  try {
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    console.log("Answer Created:", answer);
+    return answer;
+  } catch (error) {
+    console.error("Failed to create answer:", error);
+    throw error;
+  }
+};
