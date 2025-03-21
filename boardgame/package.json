@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "all": "npm run build && npm run dev",
+    "start": "firebase emulators:start"
   },
   "dependencies": {
     "firebase": "^11.3.1",
