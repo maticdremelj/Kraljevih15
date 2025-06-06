@@ -3,32 +3,32 @@ import { lazy, Suspense } from "react";
 import Lobby from './Lobby';
 import LandingPage from './LandingPage';
 import NotFound from './NotFound';
-import { WebRTCProvider } from './WebrtcContext'; 
+import { WebRTCProvider } from './WebRTCContext';
 
 const Host = lazy(() => import("./Host"));
 const Join = lazy(() => import("./Join"));
 const Board = lazy(() => import("./Board"));
 
 const RoutesComponents = () => (
-  <WebRTCProvider> {/* Wrap the entire Routes with WebRTCProvider */}
+  <WebRTCProvider>
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route 
+      <Route
           path="board/:gameId"
           element={
-            <Suspense>
+            <Suspense> 
               <Board />
             </Suspense>
-          } 
+          }
       />
       <Route path="/lobby" element={<Lobby />}>
-        <Route 
-          path="host" 
+        <Route
+          path="host"
           element={
             <Suspense>
               <Host />
             </Suspense>
-          } 
+          }
         />
         <Route
           path="join"

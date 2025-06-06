@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
-import { db } from '../firebaseConfig'; // Assuming firebaseConfig is in the root
+import { db } from './firebaseConfig';
 import { doc, setDoc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { createPeerConnection, createOffer, createAnswer } from './webrtcUtils'; // Assuming webrtcUtils is in the root
+import { createPeerConnection, createOffer, createAnswer } from './webrtcUtils';
 
 const WebRTCContext = createContext(null);
 
@@ -16,18 +16,55 @@ export const useWebRTC = () => {
 export const WebRTCProvider = ({ children }) => {
   const pcRef = useRef(null);
   const dataChannelRef = useRef(null);
-  const gameIdRef = useRef(null); // To hold the current gameId reliably
+  const gameIdRef = useRef(null);
   const [gameId, setGameId] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'disconnected', 'connecting', 'connected'
+  const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [lastReceivedMessage, setLastReceivedMessage] = useState('');
-  const messageCallbacks = useRef([]); // To hold message listeners for Board.jsx
+  const messageCallbacks = useRef([]);
+  const remoteDescriptionSet = useRef(false); // Track if remote description is set
 
-  // Initialize WebRTC Peer Connection and Data Channel
+  const setupDataChannelListeners = useCallback((channel) => {
+    channel.onopen = () => {
+      console.log("WebRTCContext: Data Channel opened!");
+      setConnectionStatus('connected');
+    };
+    channel.onmessage = (event) => {
+      console.log("WebRTCContext: Data Channel message:", event.data);
+      setLastReceivedMessage(event.data);
+      messageCallbacks.current.forEach(callback => callback(event.data));
+    };
+    channel.onclose = () => {
+      console.log("WebRTCContext: Data Channel closed!");
+      setConnectionStatus('disconnected');
+    };
+    channel.onerror = (error) => {
+      console.error("WebRTCContext: Data Channel error:", error);
+      setConnectionStatus('disconnected');
+    };
+  }, []);
+
+  // Helper to add ICE candidates
+  const handleIceCandidates = useCallback(async (candidates, isHost) => {
+      const pc = pcRef.current;
+      if (pc && pc.signalingState !== "closed" && pc.remoteDescription && candidates && candidates.length > 0) {
+          console.log(`WebRTCContext: Processing new ${isHost ? 'host' : 'guest'} ICE candidates:`, candidates.length);
+          for (const candidate of candidates) {
+              try {
+                  await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                  // Ignore errors for duplicate candidates, log others
+                  if (!e.message.includes("The ICE candidate has already been added")) {
+                      console.error(`WebRTCContext: Error adding received ${isHost ? 'host' : 'guest'} ICE candidate:`, e);
+                  }
+              }
+          }
+      }
+  }, []);
+
   useEffect(() => {
     pcRef.current = createPeerConnection();
     const pc = pcRef.current;
 
-    // Set up onicecandidate handler for both Host and Joiner
     pc.onicecandidate = async (event) => {
       if (event.candidate && gameIdRef.current) {
         const gameRef = doc(db, "games", gameIdRef.current);
@@ -40,48 +77,25 @@ export const WebRTCProvider = ({ children }) => {
           currentGuestCandidates = existingGameData.data().iceCandidatesGuest || [];
         }
 
-        // Determine if we are the host or guest based on current signalling state or if we have an offer
-        // This is a simplification; a more robust approach might be to pass role during connection init
         if (pc.localDescription && pc.localDescription.type === 'offer') {
-          // We are the host
-          await setDoc(gameRef, {
+          // If we are the host and generating candidates
+          await updateDoc(gameRef, {
             iceCandidatesHost: [...currentHostCandidates, event.candidate.toJSON()]
-          }, { merge: true });
+          });
         } else if (pc.localDescription && pc.localDescription.type === 'answer') {
-          // We are the guest
-          await setDoc(gameRef, {
+           // If we are the guest and generating candidates
+           await updateDoc(gameRef, {
             iceCandidatesGuest: [...currentGuestCandidates, event.candidate.toJSON()]
-          }, { merge: true });
+          });
         }
       }
     };
 
-    // Set up data channel handler for the 'joiner' side
     pc.ondatachannel = (event) => {
       const dataChannel = event.channel;
       dataChannelRef.current = dataChannel;
       console.log("WebRTCContext: Data Channel received:", dataChannel.label);
       setupDataChannelListeners(dataChannel);
-    };
-
-    const setupDataChannelListeners = (channel) => {
-      channel.onopen = () => {
-        console.log("WebRTCContext: Data Channel opened!");
-        setConnectionStatus('connected');
-      };
-      channel.onmessage = (event) => {
-        console.log("WebRTCContext: Data Channel message:", event.data);
-        setLastReceivedMessage(event.data);
-        messageCallbacks.current.forEach(callback => callback(event.data));
-      };
-      channel.onclose = () => {
-        console.log("WebRTCContext: Data Channel closed!");
-        setConnectionStatus('disconnected');
-      };
-      channel.onerror = (error) => {
-        console.error("WebRTCContext: Data Channel error:", error);
-        setConnectionStatus('disconnected');
-      };
     };
 
     return () => {
@@ -90,59 +104,57 @@ export const WebRTCProvider = ({ children }) => {
         pcRef.current = null;
         dataChannelRef.current = null;
         gameIdRef.current = null;
+        remoteDescriptionSet.current = false; // Reset on unmount
       }
     };
-  }, []); // Run only once on mount
+  }, [setupDataChannelListeners]); // Dependencies are `setupDataChannelListeners`
 
-  // Host function: Create game and offer
   const createGame = useCallback(async () => {
     setConnectionStatus('connecting');
     const pc = pcRef.current;
 
-    // Create data channel for the 'host' side
     const dataChannel = pc.createDataChannel("game_state");
     dataChannelRef.current = dataChannel;
     setupDataChannelListeners(dataChannel);
 
     const newGameId = Math.random().toString(36).substring(2, 9);
     setGameId(newGameId);
-    gameIdRef.current = newGameId; // Update ref immediately
+    gameIdRef.current = newGameId;
 
     const offer = await createOffer(pc);
     const gameRef = doc(db, "games", newGameId);
-    await setDoc(gameRef, { offer: offer.toJSON() });
+    await setDoc(gameRef, { offer });
     console.log("WebRTCContext: Offer saved to Firestore:", offer);
 
-    // Listen for answer and guest ICE candidates
     const unsubscribe = onSnapshot(gameRef, async (snapshot) => {
-      const data = snapshot.data();
-      if (data?.answer && pc.signalingState !== "closed" && pc.remoteDescription?.type !== 'answer') {
-        console.log("WebRTCContext: Answer received from Firestore:", data.answer);
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-      }
-      if (data?.iceCandidatesGuest) {
-        for (const candidate of data.iceCandidatesGuest) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (e) {
-            console.error("WebRTCContext: Error adding received guest ICE candidate:", e);
-          }
+        const data = snapshot.data();
+        // Host: Process answer only if PC is in 'have-local-offer' state and remote description not yet set
+        if (data?.answer && pc.signalingState === 'have-local-offer' && !remoteDescriptionSet.current) {
+            console.log("WebRTCContext: Answer received from Firestore:", data.answer);
+            try {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                remoteDescriptionSet.current = true; // Mark as set
+                console.log("WebRTCContext: Remote Answer set successfully.");
+            } catch (e) {
+                console.error("WebRTCContext: Error setting remote description (answer):", e);
+            }
         }
-        // Clear candidates from Firestore after processing to prevent re-adding
-        await updateDoc(gameRef, { iceCandidatesGuest: [] });
-      }
+        // Host: Process guest ICE candidates
+        if (data?.iceCandidatesGuest && data.iceCandidatesGuest.length > 0) {
+            await handleIceCandidates(data.iceCandidatesGuest, false);
+            await updateDoc(gameRef, { iceCandidatesGuest: [] }); // Clear candidates after processing
+        }
     });
 
-    return { gameId: newGameId, unsubscribe }; // Return gameId and unsubscribe function
-  }, []);
+    return { gameId: newGameId, unsubscribe };
+  }, [setupDataChannelListeners, handleIceCandidates]);
 
-  // Join function: Join game and send answer
   const joinGame = useCallback(async (id) => {
     setConnectionStatus('connecting');
     const pc = pcRef.current;
 
     setGameId(id);
-    gameIdRef.current = id; // Update ref immediately
+    gameIdRef.current = id;
 
     const gameRef = doc(db, "games", id);
     const gameSnap = await getDoc(gameRef);
@@ -154,31 +166,24 @@ export const WebRTCProvider = ({ children }) => {
 
     console.log("WebRTCContext: Offer received from Firestore:", gameData.offer);
     await pc.setRemoteDescription(new RTCSessionDescription(gameData.offer));
-
-    // Listen for host ICE candidates
-    const unsubscribe = onSnapshot(gameRef, async (snapshot) => {
-      const data = snapshot.data();
-      if (data?.iceCandidatesHost) {
-        for (const candidate of data.iceCandidatesHost) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch (e) {
-            console.error("WebRTCContext: Error adding received host ICE candidate:", e);
-          }
-        }
-        // Clear candidates from Firestore after processing to prevent re-adding
-        await updateDoc(gameRef, { iceCandidatesHost: [] });
-      }
-    });
+    remoteDescriptionSet.current = true; // Mark as set for joiner too
 
     const answer = await createAnswer(pc);
-    await setDoc(gameRef, { answer: answer.toJSON() }, { merge: true });
+    await setDoc(gameRef, { answer }, { merge: true });
     console.log("WebRTCContext: Answer sent to Firestore:", answer);
 
-    return { unsubscribe }; // Return unsubscribe function
-  }, []);
+    const unsubscribe = onSnapshot(gameRef, async (snapshot) => {
+        const data = snapshot.data();
+        // Joiner: Process host ICE candidates
+        if (data?.iceCandidatesHost && data.iceCandidatesHost.length > 0) {
+            await handleIceCandidates(data.iceCandidatesHost, true);
+            await updateDoc(gameRef, { iceCandidatesHost: [] }); // Clear candidates after processing
+        }
+    });
 
-  // Function to send data via the data channel
+    return { unsubscribe };
+  }, [setupDataChannelListeners, handleIceCandidates]);
+
   const sendDataMessage = useCallback((message) => {
     if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
       dataChannelRef.current.send(message);
@@ -189,7 +194,6 @@ export const WebRTCProvider = ({ children }) => {
     return false;
   }, []);
 
-  // Function to register a callback for incoming messages (for Board.jsx)
   const addMessageListener = useCallback((callback) => {
     messageCallbacks.current.push(callback);
     return () => {
