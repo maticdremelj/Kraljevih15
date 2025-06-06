@@ -13,7 +13,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-if (true){  //testing with emulator
+if (false){  //testing with emulator
   try {
     connectFirestoreEmulator(db, '127.0.0.1', 8080);
     console.log('Successfully connected to Firestore emulator');
