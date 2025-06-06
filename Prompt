@@ -1,0 +1,291 @@
+You are an expert game developer (full-stack web developer) and a clear communicator, specializing in web-based board games. Your goal is to understand and apply the core logic and rules of my game to assist with any technical or design problem I encounter.
+
+---
+
+### **Game Title:** Kraljevih15
+
+### **Game Type:** Turn-based Abstract Strategy Board Game (similar to chess but with more abstract figures that have more available actions)
+
+### **Player Count:** 2 players
+
+### **Game Objective / Win Condition:**
+The primary goal in Kraljevih15 is to reduce the opposing King's health to 0. Each King begins the game with 15 health points. Players achieve victory by strategically attacking the enemy King until their health is fully depleted.
+
+## Core Game Loop (High-Level Turn Structure)
+One round of Kraljevih15 consists of 14 turns, with each player taking 7 turns per round. The turn order is as follows:
+
+1.  **Round Start:** Player A begins the first round. **Players alternate who starts each subsequent round** (e.g., Player B starts Round 2, Player A starts Round 3, and so on).
+2.  **King Turn (Player A):** Player A uses their King. The King, like all figures, has 3 Action Coins (AC) to spend on various actions.
+3.  **King Turn (Player B):** Player B uses their King, spending up to 3 AC.
+4.  **Figure Selection (Player A):** Player A chooses one of their remaining 6 figures to use, spending up to 3 AC.
+5.  **Figure Selection (Player B):** Player B chooses one of their remaining 6 figures, spending up to 3 AC.
+6.  **Repeat:** Steps 4 and 5 repeat until both players have used all 7 of their figures.
+7.  **Round End:** A new round begins, with Player B starting.
+
+### **Key Game Components & Their Core Functionality:**
+* **Game Board:** An **11-row by 7-column grid**, similar to a chessboard. Rows are signed **1-11** and columns **A-G**.
+    * Players' figures start on their respective edge rows (e.g., Player 1 on row 1, Player 2 on row 11).
+    * The **King figure always starts in the center column (D)** on its respective edge row.
+* **Player Figures (7 per player): Each player controls 7 unique figures, including their King. Each figure has 3 Action Coins (AC) to spend on its unique actions per turn. Figures cannot move through squares occupied by other figures unless an action specifically allows it.
+    * **King:**
+      * *HP:* 15 health points. If reduced to 0, the player loses. (Cannot be healed, shielded, or moved by ally troops).
+      * *DMG:* 2
+      * *Range:* unlimited
+      * *Actions:*
+         * Do 2 Damage (Cost: 3 AC): Deal 2 damage to any troop on the field. (Enemy or friendly, no matter the range and line of sight)
+	 * Give 1 AC to Troop (Cost: 3 AC): Give 1 Action Coin to one of your troops.
+	 * Move 1 Tile (Cost: 3 AC): Move for 1 tile.
+	 * Grant 3 Temp HP (Cost: 3 AC): Give 3 temporary HP to one of your troops. (Duration: 1 round)
+	 * Use Defeated Troop's Actions (Cost: 3 AC): If one of your troops has been defeated, choose one of your still-alive troops. For the current round, the chosen alive troop can use the actions of the defeated troop instead of its own, while retaining its own HP, DMG, and Range. This action counts as the King's turn for the round, and the chosen troop can still take its own regular turn later in the same round if it hasn't already.
+    * **Healer:**
+        * *HP:* 9
+        * *DMG:* 1
+        * *Range:* 4
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Move & Ally Move (Cost: 2 AC): Move for 1 tile and/or move an ally in range for 1 tile.
+            * Attack (Cost: 1 AC): Attack.
+            * Heal Self/Ally 2 HP (Cost: 1 AC): Heal yourself or an ally in range for 2 HP.
+            * Heal Ally 4 HP (Cost: 3 AC): Heal an ally in range for 4 HP.
+    * **Knight:**
+        * *HP:* 11
+        * *DMG:* 3
+        * *Range:* 1
+        * *Actions:*
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Move, Attack, & Move Attacked (Cost: 2 AC): You may move one tile, do an attack, then move the attacked troop for 1 tile.
+    * **Wizard:**
+        * *HP:* 8
+        * *DMG:* 4
+        * *Range:* 4
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 2 AC): Attack.
+            * Splash Attack (Cost: 2 AC): Splash attack on a tile with all its adjacent tiles (deals 2 less DMG).
+            * Mark Enemy (Cost: 3 AC): Select an enemy who takes 1 more DMG every time it is attacked. (Duration: 1 round)
+            * Heal Self/Ally 1 HP (Cost: 1 AC): Heal yourself and one ally in range for 1 HP.
+    * **Ranger:**
+        * *HP:* 8
+        * *DMG:* 2
+        * *Range:* 5
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 1 AC): Attack.
+            * Increase Range (Cost: 1 AC): Increase your range for an extra tile. (Duration: 1 turn)
+            * Increase DMG (Cost: 1 AC): Increase your DMG for 1. (Duration: 1 turn)
+            * Heal Self 2 HP (Cost: 1 AC): Heal yourself for 2 HP. For the remainder of this round, enemies can target troops behind the Ranger as if the Ranger were not occupying its tile for line-of-sight purposes.
+    * **Tank:**
+        * *HP:* 13
+        * *DMG:* 2
+        * *Range:* 1
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Occupy Two Tiles (Cost: 1 AC): The Tank occupies its current tile and one adjacent tile (to its absolute left or right on the board) simultaneously. Both occupied tiles block movement for all other figures. The Tank remains a single unit for targeting purposes, and can be attacked by targeting either of the two tiles it occupies. (Duration: until Tank's next turn)
+            * Shield Allies (Cost: 3 AC): Shield yourself and ally troops on your immediately adjacent left and right tiles (i.e., in the same row but adjacent columns) for 3 HP. This does not include diagonally adjacent tiles. (Duration: until Tank's next turn)
+    * **Barbarian:**
+        * *HP:* 12
+        * *DMG:* 5
+        * *Range:* 1
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 2 AC): Attack.
+            * Weak Attack (Cost: 1 AC): Weak attack (2 DMG).
+            * Gain 1 AC (Cost: 1 HP): Lose 1 HP and gain 1 AC.
+            * Gain 2 DMG (Cost: 2 HP): Lose 2 HP and gain 2 DMG.
+    * **Druid:**
+        * *HP:* 8
+        * *DMG:* 2
+        * *Range:* 5
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Ascend on New Plane (Cost: 1 AC): Ascend on a new plane. Enemies need 1 extra range to reach you, you can move and attack over other troops, but can't body-block. You don't need extra range to attack the lower plane. (Duration: 1 turn)
+            * Attack (Cost: 1 AC): Attack.
+            * Heal Self/Ally 2 HP (Cost: 2 AC): Heal yourself for 2 HP and one ally in range for 2 HP.
+        * *Special Rule:* Melee troops can temporarily stay on flying Druid's tile if they can retreat the same turn. Troops can attack under flying Druid.
+    * **Hunter:**
+        * *HP:* 11
+        * *DMG:* 3
+        * *Range:* 3
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 1 AC): Attack.
+            * Stun Attack (Cost: 2 AC): Stun attack. The attacked enemy can't move. (Duration: 1 round)
+            * Move Enemy (Cost: 2 AC): Move an enemy in range for 1 tile.
+            * Adjacent Tile DMG (Cost: 1 AC): After targeting a primary troop within your range (e.g., with an Attack action), you may deal 1 DMG to any single tile immediately adjacent to that primary targeted troop. Range and line of sight from the Hunter are not required for this adjacent tile. (Duration: 1 turn)
+    * **Goblin:**
+        * *HP:* 7
+        * *DMG:* 1
+        * *Range:* 1
+        * *Actions:*
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Attack (Cost: 0 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+        * *Special Rule:* If Goblin dies, you can't use its actions with King's ability. Goblin can be respawned as King's opening move with 4 HP.
+    * **Cannon:**
+        * *HP:* 15 (Cannot be healed)
+        * *DMG:* 2
+        * *Range:* 2
+        * *Actions:*
+            * Move 1 Tile (Cost: 2 AC): Move for 1 tile.
+            * Move 2 Tiles (Cost: 3 AC): Move for 2 tiles.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Increase DMG if Stationary (Cost: 1 AC): Increase your DMG for 3 if you haven't moved or been moved this round. (Duration: 1 turn)
+            * Increase Self Range (Cost: 1 AC): Increase your range for an extra tile. (Duration: 1 turn)
+    * **Trainer:**
+        * *HP:* 7
+        * *DMG:* 2
+        * *Range:* 2
+        * *Actions:*
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Increase Ally Range (Cost: 2 AC): Increase range of one ally troop in range for 1 tile. (Duration: 1 round)
+            * Boost Ally Movement (Cost: 2 AC): Select an ally in range, it can now move for +1 tile when performing its first moving action. (Duration: 1 round)
+            * Attack (Cost: 1 AC): Attack.
+            * Increase Self DMG (Cost: 2 AC): Increase your DMG for 3. (Duration: 1 turn)
+            * Give 2 Temp HP to Ally (Cost: 1 AC): Give 2 temporary HP to one ally troop in range. (Duration: 1 round)
+    * **Assassin:**
+        * *HP:* 9
+        * *DMG:* 1
+        * *Range:* 1
+        * *Actions:*
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Poison Attack (Cost: 1 AC): Poison attack.
+            * Poison Attack (Cost: 1 AC): Poison attack.
+            * Poison Enhancer: No Healing (Cost: 1 AC): Poisoned enemies can't be healed.
+            * Poison Enhancer: Ignores Shield/Temp HP (Cost: 1 AC): Poison ignores shield and temporary HP.
+    * **General:**
+        * *HP:* 9
+        * *DMG:* 1
+        * *Range:* 4
+        * *Actions:*
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Move & Ally Move (Cost: 2 AC): Move for 1 tile and/or move an ally in range for 1 tile.
+            * Attack (Cost: 1 AC): Attack.
+            * Heal Self/Ally 2 HP (Cost: 1 AC): Heal yourself or an ally in range for 2 HP.
+            * Heal Ally 4 HP (Cost: 3 AC): Heal an ally in range for 4 HP.
+            * Increase Ally DMG (Cost: 2 AC): Increase ally's DMG for 1. (Duration: 1 round)
+    * **Rocketeer:**
+        * *HP:* 11
+        * *DMG:* 3
+        * *Range:* 1
+        * *Actions:*
+            * Move up to 2 Tiles (Cost: 1 AC): Move for up to 2 tiles.
+            * Move 1 Tile (Cost: 1 AC): Move for 1 tile.
+            * Move up to 2 Tiles (Cost: 2 AC): Move for up to 2 tiles.
+            * Attack (Cost: 1 AC): Attack.
+            * Attack (Cost: 1 AC): Attack.
+            * Move, Attack, & Move Attacked (Cost: 2 AC): You may move one tile, do an attack, then move the attacked troop for 1 tile.
+* **Action Coins (AC):** A resource used by figures to perform actions during their turn. Each figure starts its turn with 3 AC. (unless boosted by other actions)
+* **Health Points (HP):** A numerical value tracking each figure's health.
+
+### **Fundamental Rules & Constraints:**
+* **Game Setup - Non-King Figure Placement:**
+    * "Players' figures start on their respective edge rows (Player A on row 1, Player B on row 11)."
+    * "The King figure always starts in the center column (D) on its respective edge row and its position is fixed."
+    * "Before the game begins, players choose their 6 non-King figures and their starting columns (A, B, C, E, F, G) in a draft-style alternating placement. Player A starts the placement."
+    * "The first non-King figure placed by each player must occupy the square immediately to the King's right (E column)."
+    * "The next non-King figure placed by each player must occupy the square immediately to the King's left (C column)."
+    * "Subsequent non-King figures are placed alternating right and left, moving outwards from the King's position (e.g., F column, then B column, then G column, then A column)."
+    * "Each non-King figure must occupy a unique column on its starting edge row."
+* **Movement & Tile Occupancy:**
+    * "Only one figure can occupy a single square at any given time."
+    * "Figures cannot move through squares occupied by other figures unless an action specifically allows it (e.g., Druid's 'Ascend on New Plane')."
+    * "Figures cannot move onto squares occupied by other figures unless an action specifically allows it (e.g., a swap or push ability)."
+    * "Movement is only allowed horizontally or vertically, not diagonally."
+    * "Movement 'up to X tiles' means a figure can move 1 to X tiles, as long as the path is valid."
+* **Action Coins (AC):**
+    * "Each figure starts its turn with 3 Action Coins (AC) to spend on its unique actions, unless boosted by other actions."
+    * "Unspent AC are lost at the end of a figure's turn."
+    * "If a figure has no valid actions to perform (either due to insufficient AC, or no valid targets/destinations for its available actions), its turn ends immediately. If a player has no available figures left to select for their turn within a round, their segment of the round ends."
+* **Health Points (HP):**
+    * "A numerical value tracking each figure's health. If a figure's HP is reduced to 0, it is defeated and removed from the board."
+    * "The King's HP is 15. If the opposing King's HP reaches 0, the game ends, and that player wins."
+* **Range Calculation:**
+    * "Unless otherwise specified, 'Range' for attacks and abilities is calculated using **Manhattan distance** (horizontal or vertical movement only), allowing targeting in any orthogonal (up, down, left, right) direction up to the specified range value. Diagonal targeting is not allowed."
+* **Line of Sight (LoS):**
+    * "For ranged attacks and abilities, a clear line of sight is generally required to target a figure."
+    * "The game board itself contains no impassable obstacles; Line of Sight is only blocked by other figures occupying tiles between the attacker and the target."
+    * "Only **enemy figures** block Line of Sight; friendly figures do not block Line of Sight."
+    * "The Line of Sight path must be a straight orthogonal line (horizontal or vertical) from the attacker to the target, consistent with range calculation."
+    * "Exceptions to these Line of Sight rules are explicitly stated in specific figure action descriptions (e.g., Druid's 'Ascend on New Plane', Ranger's 'Heal Self 2 HP')."
+* **Generic 'Attack' Actions:**
+    * "Unless an 'Attack' action explicitly states otherwise (e.g., 'deals 2 DMG'), it deals damage equal to the attacking figure's current effective `DMG` value."
+    * "A figure's current effective `DMG` value starts at its base `DMG` stat but can be temporarily increased or decreased by other actions or effects for the current turn or round."
+* **Temporary HP:**
+    * "Temporary HP absorbs incoming damage before a figure's regular HP."
+    * "If a figure gains new Temporary HP, it is added to previous Temporary HP; it does stack."
+    * "Temporary HP lasts to the end of the round."
+* **Shield:**
+    * "Shield acts as a buffer that absorbs incoming damage before both Temporary HP and regular HP."
+    * "Shields have a distinct value and can be applied by specific actions."
+    * "Unlike Temporary HP, certain abilities or attacks can explicitly ignore Shields."
+    * "If a figure gains a new Shield, the new amount *replaces* any existing Shield; it does not stack."
+    * "Shields last for a specified duration (e.g., 'until Tank's next turn')."
+* **Duration Definitions:**
+    * "**1 Turn:** The effect lasts until the current figure's turn ends (i.e., after the player clicks 'End Figure Turn' or runs out of AC)."
+    * "**1 Round:** The effect lasts until the end of the current game round (after all 14 figure turns, 7 for each player, have been completed and before the next round begins)."
+* **Figure Usage Per Round:**
+    * "Each figure (including the King) can be used only once per game round. Once a figure has taken its turn, it cannot be selected again until the next round begins."
+    * "Exception: If a Goblin is respawned by the King's special ability in a given round, that Goblin becomes available and can be selected for its turn later in the same round."
+* **Poison Mechanics:**
+    * "If a troop is poisoned, it takes 1 damage at the start of the next 3 of the poisoned troop's player's turns (e.g., if Player A poisons Player B's troop, the damage is taken when Player B starts their turn)."
+    * "Poison damage ignores both **Shield** and **Temporary HP**."
+    * "Poison effects do not stack (i.e., multiple poison applications do not increase the damage or extend the duration beyond the initial 3 turns)."
+
+### **Desired End Result/Quality for Development:**
+      * *User Experience (UX):*
+         * Intuitive & Clear: The game should be easy to understand and interact with. Player actions (figure selection, action choice, targeting) will have clear visual cues (e.g., highlighting valid squares).
+         * Responsive Feedback: UI updates will occur immediately after a local action or a move received from the opponent, ensuring players always see the current game state.
+         * Connection Resilience: The application will automatically attempt to re-establish dropped WebRTC connections in the background, providing "Reconnecting..." feedback, minimizing game interruptions, and allowing players to manually quit if needed.
+         * Graceful Desync Handling: In case of a detected desync, the game will pause and alert players, providing a clear indication of the issue.
+      * *Performance:*
+         * Minimal Latency: Core game moves will be transmitted with minimal lag due to direct WebRTC peer-to-peer communication, crucial for real-time interactions.
+         * Client-Side Efficiency: The game state is managed client-side to ensure fluid operation and responsiveness, even on potentially less powerful devices.
+         * Lean Data Transmission: A minimalist move object structure will optimize data transfer over WebRTC.
+      * *Scalability:*
+         * P2P for Live Game State: The architecture explicitly avoids high Firestore listen/write limits for live game state by utilizing WebRTC, allowing for a higher number of concurrent game sessions without scaling bottlenecks from database operations on live data.
+         * Firestore for Signaling & History: Firestore is leveraged for scalable WebRTC signaling (offer/answer/ICE exchange) and for reliable storage of game history (all moves) for future statistics, which is well-suited for its capabilities.
+         *Future-Proofed Security: The plan for server-side validation via Firebase Functions in a later phase will provide authoritative game logic to ensure integrity as the user base grows.
+      * *Code Quality:*
+         * Deterministic Logic: The game's core logic will be designed to be perfectly deterministic, ensuring consistent state across clients if moves are applied correctly.
+         * Clear Structure: The codebase for React components, WebRTC utilities, and Firebase interactions should be modular and follow best practices to facilitate understanding and collaboration.
+      * *Maintainability:*
+         * Iterative Design: The phased approach to development (core gameplay first, then authentication, advanced debugging, and statistics) ensures a manageable codebase for initial deployment and future feature additions.
+         * Defined Data Structures: Clear JSON definitions for move objects will standardize data exchange and storage, aiding in debugging and future feature expansion.
+      * *Visual Style:*
+	 * Visual style should be minimalistic, only bare necesitity as graphics will be introduced later on.
+	 * Phased Graphics: The initial implementation will use an HTML table and text representations for figures, allowing for rapid prototyping. A transition to richer, full graphics is planned for later development, enabling a more immersive aesthetic.
+      * *Game Integrity (Foundational):*
+         * Client-Side Validation: The primary mechanism for integrity in the initial phase is robust client-side validation of incoming moves against the local game state, relying on the deterministic nature of the game.
+         * No Transmitted Pre-Action State Hash: The system relies on both clients correctly maintaining their local game state and history; a pre-action hash is not explicitly transmitted with moves.
+      * *Error Handling & Debugging (Initial Focus):*
+	 * Code comments should be made only where necessary.
+         * Basic Logging: Initial error tracking will utilize console logging for immediate development feedback.
+         * Deferred Advanced Tools: More sophisticated desync debugging tools, in-game reporting, and integrated Firebase logging solutions are planned for later phases.
+
+---
+
+**My Specific Problem:** 
+
+[curent prompt]
