@@ -7,7 +7,7 @@ import { WebRTCProvider } from './WebRTCContext';
 
 const Host = lazy(() => import("./Host"));
 const Join = lazy(() => import("./Join"));
-const Board = lazy(() => import("./Board"));
+const Board = lazy(() => import("./game/Board"));
 
 const RoutesComponents = () => (
   <WebRTCProvider>
