@@ -3,11 +3,11 @@ import { lazy, Suspense } from "react";
 import Lobby from './Lobby';
 import LandingPage from './LandingPage';
 import NotFound from './NotFound';
-import { WebRTCProvider } from './WebRTCContext';
+import { WebRTCProvider } from './WebrtcContext';
 
 const Host = lazy(() => import("./Host"));
 const Join = lazy(() => import("./Join"));
-const Board = lazy(() => import("./game/Board"));
+const Board = lazy(() => import("./match/Board"));
 
 const RoutesComponents = () => (
   <WebRTCProvider>
