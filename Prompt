@@ -30,7 +30,7 @@ One round of Kraljevih15 consists of 14 turns, with each player taking 7 turns p
     * **King:**
       * *HP:* 15 health points. If reduced to 0, the player loses. (Cannot be healed, shielded, or moved by ally troops).
       * *DMG:* 2
-      * *Range:* unlimited
+      * *Range:* 100
       * *Actions:*
          * Do 2 Damage (Cost: 3 AC): Deal 2 damage to any troop on the field. (Enemy or friendly, no matter the range and line of sight)
 	 * Give 1 AC to Troop (Cost: 3 AC): Give 1 Action Coin to one of your troops.
